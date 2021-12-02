@@ -48,9 +48,10 @@ func usage() {
 	fmt.Fprintf(o, "  SoftHSM2:\n")
 	fmt.Fprintf(o, "    %s --pin <pin> --id 1000 --wrap-key rsa.pub > wrap.der\n", name)
 	fmt.Fprintf(o, "    %s --pin <pin> --label ec-256 --wrap-key rsa.pub > wrap.der\n\n", name)
-	fmt.Fprintf(o, "  Others:\n")
-	fmt.Fprintf(o, "    %s [--module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so] --pin <pin> --id 1000 --wrap-key rsa.pub > wrap.der\n", name)
-	fmt.Fprintf(o, "    %s [--module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so] --pin <pin> --label ec-256 --wrap-key rsa.pub > wrap.der\n\n", name)
+	fmt.Fprintf(o, "  CloudHSM:\n")
+	fmt.Fprintf(o, "    %s --module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so --cloudhsm --pin <pin> --label ec-256 --wrap-key rsa.pub > wrap.der\n\n", name)
+	fmt.Fprintf(o, "  OpenSC:\n")
+	fmt.Fprintf(o, "    %s --module /usr/local/lib/opensc-pkcs11.so --pin <pin> --label ec-256 --wrap-key rsa.pub > wrap.der\n\n", name)
 	fmt.Fprintln(o, "Available flags:")
 	flag.PrintDefaults()
 }
