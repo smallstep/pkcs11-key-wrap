@@ -119,6 +119,19 @@ func main() {
 		fatal("error importing wrapping key: %v", err)
 	}
 
+	// The following steps is the step by step implementation of:
+	//
+	//   m := pkcs11.NewMechanism(pkcs11.CKM_RSA_AES_KEY_WRAP, &pkcs11.OAEPParams{
+	//       HashAlg:    pkcs11.CKM_SHA_1,
+	//       MGF:        pkcs11.CKG_MGF1_SHA1,
+	//       SourceType: pkcs11.CKZ_DATA_SPECIFIED,
+	//       SourceData: nil,
+	//   })
+	//   out, err := ctx.WrapKey(session, []*pkcs11.Mechanism{}, wrappingHandle, keyHandle)
+	//   if err != nil {
+	//       fatal("error wrapping key: %v", err)
+	//   }
+
 	debug("Creating AES wrapping key.")
 	aesHandle, err := createAESWrappingKey(ctx, session)
 	if err != nil {
@@ -131,7 +144,7 @@ func main() {
 			HashAlg:    pkcs11.CKM_SHA_1,
 			MGF:        pkcs11.CKG_MGF1_SHA1,
 			SourceType: pkcs11.CKZ_DATA_SPECIFIED,
-			SourceData: []byte(""),
+			SourceData: nil,
 		}),
 	}, wrappingHandle, aesHandle)
 	if err != nil {
@@ -159,19 +172,6 @@ func main() {
 
 	result := append(wrappedAESKey, wrappedKey...)
 	os.Stdout.Write(result)
-
-	// m := pkcs11.NewMechanism(pkcs11.CKM_RSA_AES_KEY_WRAP, &pkcs11.OAEPParams{
-	// 	HashAlg:    pkcs11.CKM_SHA_1,
-	// 	MGF:        pkcs11.CKG_MGF1_SHA1,
-	// 	SourceType: pkcs11.CKZ_DATA_SPECIFIED,
-	// 	SourceData: []byte(""),
-	// })
-
-	// fmt.Println("Wrapping key.")
-	// b, err := ctx.WrapKey(session, []*pkcs11.Mechanism{m}, wrappingHandle, keyHandle)
-	// if err != nil {
-	// 	fatal("error wrapping key: %v", err)
-	// }
 }
 
 func objectID(s string) ([]byte, error) {
