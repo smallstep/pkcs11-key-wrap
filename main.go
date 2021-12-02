@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -40,9 +41,22 @@ func softhsm2Path() string {
 	}
 }
 
+func usage() {
+	o := flag.CommandLine.Output()
+	name := filepath.Base(os.Args[0])
+	fmt.Fprintf(o, "Usage:\n\n")
+	fmt.Fprintf(o, "  %s [--module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so] --pin <pin> --key 1000 --wrap-key rsa.pub > wrap.der\n\n", name)
+	fmt.Fprintln(o, "Available flags:")
+	flag.PrintDefaults()
+}
+
+var verbose bool
+
 func debug(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, format, args...)
-	fmt.Fprintln(os.Stderr)
+	if verbose {
+		fmt.Fprintf(os.Stderr, format, args...)
+		fmt.Fprintln(os.Stderr)
+	}
 }
 
 func main() {
@@ -56,7 +70,14 @@ func main() {
 	flag.StringVar(&key, "key", "", "The object id of the key to wrap.")
 	flag.StringVar(&wrappingKey, "wrapping-key", "", "The file with the RSA public key used as a wrapping key.")
 	flag.BoolVar(&cloudhsm, "cloudhsm", false, "Specify if it is cloudhsm to use a vendor defined operations.")
+	flag.BoolVar(&verbose, "v", false, "Enable verbose output.")
+	flag.Usage = usage
 	flag.Parse()
+
+	if len(os.Args) == 1 {
+		flag.Usage()
+		return
+	}
 
 	switch {
 	case module == "":
