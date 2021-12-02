@@ -12,11 +12,14 @@ go install github.com/smallstep/pkcs11-key-wrap
 ## Usage
 
 First we need to create an RSA public wrapping key, in our example this is going
-to be `rsa.pub`. Then we need to get the object id of the key that we want to
-wrap, `1000` in the following example. Finally run the wrapping tool like:
+to be `rsa.pub`. Then we need to get the object id or the label of the key that
+we want to wrap, `1000` or `my-key` in the following example. Finally run the
+wrapping tool like:
 
 ```sh
-pkcs11-key-wrap --pin xxxx --key 1000 --wrapping-key rsa.pub > wrapped.key
+pkcs11-key-wrap --pin xxxx --id 1000 --wrapping-key rsa.pub > wrapped.key
+# OR
+pkcs11-key-wrap --pin xxxx --label my-key --wrapping-key rsa.pub > wrapped.key
 ```
 
 Without the `--module` flag will try to load the softhsm2 module, from
@@ -29,7 +32,10 @@ standard `CKM_AES_KEY_WRAP_PAD` mechanism should be replaced by the custom
 
 ```sh
 pkcs11-key-wrap --module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so --cloudhsm \
-    --pin user:password --key 31303030 --wrapping-key rsa.pub > wrapped.key
+    --pin user:password --id 1000 --wrapping-key rsa.pub > wrapped.key
+# OR
+pkcs11-key-wrap --module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so --cloudhsm \
+    --pin user:password --label my-key --wrapping-key rsa.pub > wrapped.key
 ```
 
 ## CloudHSM troubleshooting

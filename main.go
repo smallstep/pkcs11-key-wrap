@@ -45,7 +45,12 @@ func usage() {
 	o := flag.CommandLine.Output()
 	name := filepath.Base(os.Args[0])
 	fmt.Fprintf(o, "Usage:\n\n")
-	fmt.Fprintf(o, "  %s [--module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so] --pin <pin> --key 1000 --wrap-key rsa.pub > wrap.der\n\n", name)
+	fmt.Fprintf(o, "  SoftHSM2:\n")
+	fmt.Fprintf(o, "    %s --pin <pin> --id 1000 --wrap-key rsa.pub > wrap.der\n", name)
+	fmt.Fprintf(o, "    %s --pin <pin> --label ec-256 --wrap-key rsa.pub > wrap.der\n\n", name)
+	fmt.Fprintf(o, "  Others:\n")
+	fmt.Fprintf(o, "    %s [--module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so] --pin <pin> --id 1000 --wrap-key rsa.pub > wrap.der\n", name)
+	fmt.Fprintf(o, "    %s [--module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so] --pin <pin> --label ec-256 --wrap-key rsa.pub > wrap.der\n\n", name)
 	fmt.Fprintln(o, "Available flags:")
 	flag.PrintDefaults()
 }
@@ -61,13 +66,14 @@ func debug(format string, args ...interface{}) {
 
 func main() {
 	var slot int
-	var module, pin string
-	var key, wrappingKey string
+	var module, pin, wrappingKey string
+	var id, label string
 	var cloudhsm bool
 	flag.StringVar(&module, "module", softhsm2Path(), "The path to the PKCS#11 module.")
 	flag.IntVar(&slot, "slot", 0, "The PKCS#11 slot.")
 	flag.StringVar(&pin, "pin", "", "The PKCS#11 ping.")
-	flag.StringVar(&key, "key", "", "The object id of the key to wrap.")
+	flag.StringVar(&id, "id", "", "The object id of the key to wrap.")
+	flag.StringVar(&label, "label", "", "The object label of the key to wrap.")
 	flag.StringVar(&wrappingKey, "wrapping-key", "", "The file with the RSA public key used as a wrapping key.")
 	flag.BoolVar(&cloudhsm, "cloudhsm", false, "Specify if it is cloudhsm to use a vendor defined operations.")
 	flag.BoolVar(&verbose, "v", false, "Enable verbose output.")
@@ -84,15 +90,19 @@ func main() {
 		fail("flag --module is required")
 	case pin == "":
 		fail("flag --pin is required")
-	case key == "":
-		fail("flag --key is required")
+	case id == "" && label == "":
+		fail("flag --id or --label is required")
 	case wrappingKey == "":
 		fail("flag --wrapping-key is required")
 	}
 
-	keyID, err := objectID(key)
-	if err != nil {
-		fail("flag --key is invalid")
+	var keyID []byte
+	if id != "" {
+		var err error
+		keyID, err = objectID(id)
+		if err != nil {
+			fail("flag --key is invalid")
+		}
 	}
 
 	rsaPub, err := readRSAPublicKey(wrappingKey)
@@ -129,7 +139,7 @@ func main() {
 	defer ctx.Logout(session)
 
 	debug("Finding key to wrap.")
-	keyHandle, err := findKey(ctx, session, pkcs11.CKO_PRIVATE_KEY, keyID)
+	keyHandle, err := findKey(ctx, session, pkcs11.CKO_PRIVATE_KEY, keyID, label)
 	if err != nil {
 		fatal("error finding key: %v", err)
 	}
@@ -227,10 +237,15 @@ func readRSAPublicKey(fn string) (*rsa.PublicKey, error) {
 	return key, nil
 }
 
-func findKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, id []byte) (handle pkcs11.ObjectHandle, err error) {
+func findKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, id []byte, label string) (handle pkcs11.ObjectHandle, err error) {
 	template := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, class),
-		pkcs11.NewAttribute(pkcs11.CKA_ID, id),
+	}
+	if len(id) > 0 {
+		template = append(template, pkcs11.NewAttribute(pkcs11.CKA_ID, id))
+	}
+	if label != "" {
+		template = append(template, pkcs11.NewAttribute(pkcs11.CKA_LABEL, []byte(label)))
 	}
 
 	// CloudHSM does not support CKO_PRIVATE_KEY set to false
