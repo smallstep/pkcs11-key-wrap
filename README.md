@@ -15,14 +15,22 @@ First we need to create an RSA public wrapping key, in our example this is going
 to be `rsa.pub`. Then we need to get the object id of the key that we want to
 wrap, `1000` in the following example. Finally run the wrapping tool like:
 
-```shell
-go run main.go --module /usr/local/lib/softhsm/libsofthsm2.so --pin xxxx \
-    --key 1000 --wrapping-key rsa.pub > wrapped.key
+```sh
+pkcs11-key-wrap --pin xxxx --key 1000 --wrapping-key rsa.pub > wrapped.key
 ```
+
+Without the `--module` flag will try to load the softhsm2 module, from
+`/usr/lib/softhsm/libsofthsm2.so` in a Linux environment and from
+`/usr/local/lib/softhsm/libsofthsm2.so` in macOS.
 
 If Amazon CloudHSM is used the flag `--cloudhsm` is required because the
 standard `CKM_AES_KEY_WRAP_PAD` mechanism should be replaced by the custom
-`CKM_CLOUDHSM_AES_KEY_WRAP_ZERO_PAD`.
+`CKM_CLOUDHSM_AES_KEY_WRAP_ZERO_PAD`. The usage in this case will be like:
+
+```sh
+pkcs11-key-wrap --module /opt/cloudhsm/lib/libcloudhsm_pkcs11.so --cloudhsm \
+    --pin user:password --key 31303030 --wrapping-key rsa.pub > wrapped.key
+```
 
 ## CloudHSM troubleshooting
 
