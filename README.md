@@ -10,7 +10,8 @@ and a temporal id for the AES key, `2001`. And finally run the wrapping tool
 like:
 
 ```shell
-go run main.go --pin xxxx --key 1000 \
+go run main.go --module /usr/local/lib/softhsm/libsofthsm2.so --pin xxxx \
+    --key 1000 \
     --wrapping-key 2000 --wrapping-key-file rsa.pub \
     --aes-wrapping-key 2001 > wrapped.key
 ```
@@ -18,6 +19,7 @@ go run main.go --pin xxxx --key 1000 \
 If the `rsa.pub` is already imported, just drop the `--wrapping-key-file` flag, like:
 
 ```shell
-go run main.go --pin xxxx --key 1000 \
+go run main.go --module /usr/local/lib/softhsm/libsofthsm2.so --pin xxxx \
+    --key 1000 \
     --wrapping-key 2000 --aes-wrapping-key 2001 > wrapped.key
 ```
