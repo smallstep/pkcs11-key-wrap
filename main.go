@@ -114,14 +114,14 @@ func main() {
 
 	err = ctx.Login(session, pkcs11.CKU_USER, pin)
 	if err != nil {
-		fatal("error loggin in: %v", err)
+		fatal("error logging in: %v", err)
 	}
 	defer ctx.Logout(session)
 
 	debug("Finding key to wrap.")
 	keyHandle, err := findKey(ctx, session, pkcs11.CKO_PRIVATE_KEY, keyID)
 	if err != nil {
-		fatal("error finding key: %v", key, err)
+		fatal("error finding key: %v", err)
 	}
 
 	debug("Importing wrapping key.")
