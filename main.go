@@ -279,21 +279,15 @@ func importWrappingKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, id []byte,
 }
 
 func createAESWrappingKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, id []byte) (pkcs11.ObjectHandle, error) {
-	template := []*pkcs11.Attribute{
+	return ctx.GenerateKey(session, []*pkcs11.Mechanism{
+		pkcs11.NewMechanism(pkcs11.CKM_AES_KEY_GEN, nil),
+	}, []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_ID, id),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "aes-wrapping-key"),
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_SECRET_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_AES),
-		pkcs11.NewAttribute(pkcs11.CKA_ENCRYPT, true),
-		pkcs11.NewAttribute(pkcs11.CKA_DECRYPT, true),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
 		pkcs11.NewAttribute(pkcs11.CKA_WRAP, true),
 		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, true),
-		pkcs11.NewAttribute(pkcs11.CKA_VERIFY, false),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
-		pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, true),
 		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, true),
-		pkcs11.NewAttribute(pkcs11.CKA_SENSITIVE, true),
-		pkcs11.NewAttribute(pkcs11.CKA_VALUE, make([]byte, 32)),
-	}
-	return ctx.CreateObject(session, template)
+		pkcs11.NewAttribute(pkcs11.CKA_VALUE_LEN, 32),
+	})
 }
