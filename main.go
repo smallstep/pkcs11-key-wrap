@@ -224,10 +224,9 @@ func findKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, id []byt
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, class),
 		pkcs11.NewAttribute(pkcs11.CKA_ID, id),
 	}
-	switch class {
-	case pkcs11.CKO_PUBLIC_KEY:
-		template = append(template, pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, false))
-	case pkcs11.CKO_PRIVATE_KEY:
+
+	// CloudHSM does not support CKO_PRIVATE_KEY set to false
+	if class == pkcs11.CKO_PRIVATE_KEY {
 		template = append(template, pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, true))
 	}
 
@@ -271,7 +270,6 @@ func importWrappingKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, id []byte,
 		pkcs11.NewAttribute(pkcs11.CKA_VERIFY, true),
 		pkcs11.NewAttribute(pkcs11.CKA_VERIFY_RECOVER, true),
 		pkcs11.NewAttribute(pkcs11.CKA_WRAP, true),
-		pkcs11.NewAttribute(pkcs11.CKA_PRIVATE, false),
 		pkcs11.NewAttribute(pkcs11.CKA_MODULUS, key.N.Bytes()),
 		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, e.Bytes()),
 	}
