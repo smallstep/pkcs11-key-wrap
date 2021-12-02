@@ -15,10 +15,7 @@ import (
 	"github.com/miekg/pkcs11"
 )
 
-const (
-	CKM_VENDOR_DEFINED                 = 0x80000000
-	CKM_CLOUDHSM_AES_KEY_WRAP_ZERO_PAD = CKM_VENDOR_DEFINED | 0x0000216F
-)
+const CKM_CLOUDHSM_AES_KEY_WRAP_ZERO_PAD = pkcs11.CKM_VENDOR_DEFINED | 0x0000216F
 
 func fail(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
@@ -51,15 +48,13 @@ func debug(format string, args ...interface{}) {
 func main() {
 	var slot int
 	var module, pin string
-	var key, wrappingKey, wrappingKeyFile, aesWrappingKey string
+	var key, wrappingKey string
 	var cloudhsm bool
 	flag.StringVar(&module, "module", softhsm2Path(), "The path to the PKCS#11 module.")
 	flag.IntVar(&slot, "slot", 0, "The PKCS#11 slot.")
 	flag.StringVar(&pin, "pin", "", "The PKCS#11 ping.")
 	flag.StringVar(&key, "key", "", "The object id of the key to wrap.")
-	flag.StringVar(&wrappingKey, "wrapping-key", "", "The object id of the wrapping key.")
-	flag.StringVar(&wrappingKeyFile, "wrapping-key-file", "", "The file with the RSA public key used as a wrapping key.")
-	flag.StringVar(&aesWrappingKey, "aes-wrapping-key", "", "The object id of the AES wrapping key.")
+	flag.StringVar(&wrappingKey, "wrapping-key", "", "The file with the RSA public key used as a wrapping key.")
 	flag.BoolVar(&cloudhsm, "cloudhsm", false, "Specify if it is cloudhsm to use a vendor defined operations.")
 	flag.Parse()
 
@@ -72,29 +67,16 @@ func main() {
 		fail("flag --key is required")
 	case wrappingKey == "":
 		fail("flag --wrapping-key is required")
-	case aesWrappingKey == "":
-		fail("flag --aes-wrapping-key is required")
 	}
 
 	keyID, err := objectID(key)
 	if err != nil {
 		fail("flag --key is invalid")
 	}
-	wrappingKeyID, err := objectID(wrappingKey)
-	if err != nil {
-		fail("flag --wrapping-key is invalid")
-	}
-	aesWrappingKeyID, err := objectID(aesWrappingKey)
-	if err != nil {
-		fail("flag --aes-wrapping-key is invalid")
-	}
 
-	var rsaPub *rsa.PublicKey
-	if wrappingKeyFile != "" {
-		rsaPub, err = readRSAPublicKey(wrappingKeyFile)
-		if err != nil {
-			fatal("error reading rsa public key: %v", err)
-		}
+	rsaPub, err := readRSAPublicKey(wrappingKey)
+	if err != nil {
+		fatal("error reading rsa public key: %v", err)
 	}
 
 	ctx := pkcs11.New(module)
@@ -132,21 +114,13 @@ func main() {
 	}
 
 	debug("Importing wrapping key.")
-	var wrappingHandle pkcs11.ObjectHandle
-	if rsaPub != nil {
-		wrappingHandle, err = importWrappingKey(ctx, session, wrappingKeyID, rsaPub)
-		if err != nil {
-			fatal("error importing wrapping key: %v", err)
-		}
-	} else {
-		wrappingHandle, err = findKey(ctx, session, pkcs11.CKO_PUBLIC_KEY, wrappingKeyID)
-		if err != nil {
-			fatal("error finding wrapping key: %v", err)
-		}
+	wrappingHandle, err := importWrappingKey(ctx, session, rsaPub)
+	if err != nil {
+		fatal("error importing wrapping key: %v", err)
 	}
 
 	debug("Creating AES wrapping key.")
-	aesHandle, err := createAESWrappingKey(ctx, session, aesWrappingKeyID)
+	aesHandle, err := createAESWrappingKey(ctx, session)
 	if err != nil {
 		fatal("error creating AES wrapping key: %v", err)
 	}
@@ -271,10 +245,9 @@ func findKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, id []byt
 	return
 }
 
-func importWrappingKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, id []byte, key *rsa.PublicKey) (pkcs11.ObjectHandle, error) {
+func importWrappingKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, key *rsa.PublicKey) (pkcs11.ObjectHandle, error) {
 	e := big.NewInt(int64(key.E))
 	template := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_ID, id),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, []byte("wrapping-key")),
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
@@ -288,11 +261,10 @@ func importWrappingKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, id []byte,
 	return ctx.CreateObject(session, template)
 }
 
-func createAESWrappingKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, id []byte) (pkcs11.ObjectHandle, error) {
+func createAESWrappingKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle) (pkcs11.ObjectHandle, error) {
 	return ctx.GenerateKey(session, []*pkcs11.Mechanism{
 		pkcs11.NewMechanism(pkcs11.CKM_AES_KEY_GEN, nil),
 	}, []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_ID, id),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "aes-wrapping-key"),
 		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
 		pkcs11.NewAttribute(pkcs11.CKA_WRAP, true),
