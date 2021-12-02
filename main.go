@@ -15,6 +15,11 @@ import (
 	"github.com/miekg/pkcs11"
 )
 
+const (
+	CKM_VENDOR_DEFINED                 = 0x80000000
+	CKM_CLOUDHSM_AES_KEY_WRAP_ZERO_PAD = CKM_VENDOR_DEFINED | 0x0000216F
+)
+
 func fail(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
 	fmt.Fprintln(os.Stderr)
@@ -47,6 +52,7 @@ func main() {
 	var slot int
 	var module, pin string
 	var key, wrappingKey, wrappingKeyFile, aesWrappingKey string
+	var cloudhsm bool
 	flag.StringVar(&module, "module", softhsm2Path(), "The path to the PKCS#11 module.")
 	flag.IntVar(&slot, "slot", 0, "The PKCS#11 slot.")
 	flag.StringVar(&pin, "pin", "", "The PKCS#11 ping.")
@@ -54,6 +60,7 @@ func main() {
 	flag.StringVar(&wrappingKey, "wrapping-key", "", "The object id of the wrapping key.")
 	flag.StringVar(&wrappingKeyFile, "wrapping-key-file", "", "The file with the RSA public key used as a wrapping key.")
 	flag.StringVar(&aesWrappingKey, "aes-wrapping-key", "", "The object id of the AES wrapping key.")
+	flag.BoolVar(&cloudhsm, "cloudhsm", false, "Specify if it is cloudhsm to use a vendor defined operations.")
 	flag.Parse()
 
 	switch {
@@ -158,8 +165,14 @@ func main() {
 	}
 
 	debug("Wrapping key using AES.")
+	var mechanism uint
+	if cloudhsm {
+		mechanism = CKM_CLOUDHSM_AES_KEY_WRAP_ZERO_PAD
+	} else {
+		mechanism = pkcs11.CKM_AES_KEY_WRAP_PAD
+	}
 	wrappedKey, err := ctx.WrapKey(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(
-		pkcs11.CKM_AES_KEY_WRAP_PAD, nil),
+		mechanism, nil),
 	}, aesHandle, keyHandle)
 	if err != nil {
 		fatal("error wrapping key: %v", err)
