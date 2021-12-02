@@ -282,7 +282,7 @@ func createAESWrappingKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, id []by
 	}, []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_ID, id),
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "aes-wrapping-key"),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
 		pkcs11.NewAttribute(pkcs11.CKA_WRAP, true),
 		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, true),
 		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, true),
